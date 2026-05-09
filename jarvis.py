@@ -1,102 +1,167 @@
-from flask import Flask, render_template_string, request
-import subprocess, os, datetime
+from flask import Flask, request, jsonify, render_template_string
+import subprocess
+import os
+import re
+from datetime import datetime
 
 app = Flask(__name__)
 
-HTML = """
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <title>Jarvis</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#ff6600">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; background: #0a0a0a; color: #fff; padding: 16px; }
-      .header { text-align: center; padding: 20px 0; }
-      .header h1 { font-size: 28px; color: #ff6600; }
-      .card { background: #1a1a1a; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #333; }
-        textarea { width: 100%; height: 120px; background: #0a0a0a; color: #fff; border: 1px solid #333; border-radius: 12px; padding: 16px; font-size: 16px; }
-      .btn { width: 100%; background: #ff6600; color: #000; padding: 18px; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; margin-top: 12px; }
-      .btn-mic { background: #222; color: #ff6600; border: 2px solid #ff6600; }
-      .btn-live { background: #00ff88; color: #000; }
-        iframe { width: 100%; height: 60vh; border: 2px solid #333; border-radius: 12px; background: white; }
-      .status { text-align: center; color: #00ff88; font-weight: bold; padding: 10px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🤖 JARVIS</h1>
-        <p>Deine Geldmaschinen-Fabrik</p>
-    </div>
-    <div class="card">
-        <button class="btn btn-mic" onclick="startMic()">🎤 Sprachbefehl</button>
-        <form method="post" id="form">
-            <textarea name="prompt" id="prompt" placeholder="Sag: Bau Saugroboter Seite mit Roborock Dreame Ecovacs">{{ prompt }}</textarea>
-            <button type="submit" class="btn">1. Vorschau generieren</button>
-        </form>
-    </div>
-    {% if code %}
-    <div class="card">
-        <h3>Live-Vorschau:</h3>
-        <iframe srcdoc="{{ code }}"></iframe>
-        <form method="post" action="/deploy">
-            <input type="hidden" name="code" value="{{ code }}">
-            <input type="hidden" name="filename" value="{{ filename }}">
-            <button type="submit" class="btn btn-live">2. LIVE SCHALTEN</button>
-        </form>
-    </div>
-    {% endif %}
-    {% if deployed %}
-    <div class="status">✅ LIVE! GitHub Repo geupdated.</div>
-    {% endif %}
-<script>
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
-function startMic() {
-    const rec = new webkitSpeechRecognition() || new SpeechRecognition();
-    rec.lang = 'de-DE';
-    rec.start();
-    rec.onresult = e => {
-        document.getElementById('prompt').value = e.results[0][0].transcript;
-        document.getElementById('form').submit();
+# JARVIS V3 BRAIN - Er versteht deine Befehle + Amazon ID
+AMAZON_ID = "Fairdeals21-21"
+
+def jarvis_brain(prompt):
+    prompt = prompt.lower()
+    
+    # Regel: "Bau Seite 3 Luftreiniger mit Levoit Philips Xiaomi"
+    if "bau seite" in prompt and "mit" in prompt:
+        match = re.search(r'bau seite (\d+) (.+?) mit (.+)', prompt)
+        if match:
+            anzahl = int(match.group(1))
+            produkt = match.group(2).strip()
+            marken = [m.strip().title() for m in match.group(3).split()]
+            return generiere_affiliate_seite(anzahl, produkt, marken)
+    
+    return f"<h1>{prompt}</h1><p>Jarvis V3 hat dich verstanden.</p>"
+
+def generiere_affiliate_seite(anzahl, produkt, marken):
+    daten = {
+        "levoit": {"modell": "Core 300S", "cadr": "230", "preis": "99", "vorteil": "Testsieger 2026"},
+        "philips": {"modell": "AC0820/10", "cadr": "190", "preis": "79", "vorteil": "Flüsterleise 19dB"},
+        "xiaomi": {"modell": "Air Purifier 4 Pro", "cadr": "400", "preis": "199", "vorteil": "App-Steuerung"},
+        "roborock": {"modell": "S8 MaxV Ultra", "cadr": "0", "preis": "1299", "vorteil": "Saugen+Wischen"},
+        "dyson": {"modell": "V15 Detect", "cadr": "0", "preis": "749", "vorteil": "Laser-Erkennung"},
+        "ecovacs": {"modell": "Deebot X2 Omni", "cadr": "0", "preis": "1099", "vorteil": "KI-Hindernis"},
+        "bosch": {"modell": "Unlimited 7", "cadr": "0", "preis": "399", "vorteil": "Wechselakku"},
+        "siemens": {"modell": "EQ.6 Plus", "cadr": "0", "preis": "699", "vorteil": "OneTouch"},
+        "delonghi": {"modell": "Magnifica S", "cadr": "0", "preis": "349", "vorteil": "Milchschaum"},
+        "melitta": {"modell": "Caffeo Solo", "cadr": "0", "preis": "199", "vorteil": "Kompakt"},
+        "jura": {"modell": "E8", "cadr": "0", "preis": "999", "vorteil": "P.E.P. Brühgruppe"}
     }
-}
-</script>
-</body>
-</html>
-"""
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{produkt.title()} Test 2026 - Die {anzahl} Besten</title>
+        <style>
+            body {{ font-family: -apple-system, Arial; margin:0; padding:15px; background:#f5f5f5; }}
+            .container {{ max-width: 800px; margin: 0 auto; }}
+            .card {{ background:white; border-radius:12px; padding:20px; margin:15px 0; box-shadow:0 2px 8px rgba(0,0,0,0.1); }}
+            .btn {{ background:#FF9900; color:#000; padding:15px 25px; border:none; border-radius:8px; font-size:18px; font-weight:bold; cursor:pointer; width:100%; text-decoration:none; display:block; text-align:center; }}
+            .preis {{ font-size:26px; color:#B12704; font-weight:bold; margin:10px 0; }}
+            .cadr {{ background:#E8F5E8; padding:8px 12px; border-radius:6px; display:inline-block; margin:5px 0; }}
+            h1 {{ color:#111; }} h2 {{ color:#FF6600; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🏆 {produkt.title()} Test {datetime.now().year}</h1>
+            <p>Jarvis hat für dich die {anzahl} besten {produkt} analysiert. Stand: {datetime.now().strftime('%d.%m.%Y')}</p>
+    """
+    
+    for i, marke in enumerate(marken[:anzahl]):
+        m = marke.lower()
+        info = daten.get(m, {"modell": f"{marke} Pro", "cadr": "200", "preis": "99", "vorteil": "Gutes Modell"})
+        amazon_link = f"https://www.amazon.de/s?k={marke}+{produkt}&tag={AMAZON_ID}"
+        badge = "🥇 Testsieger" if i == 0 else "🥈 Preis-Tipp" if i == 1 else "🥉 Profi-Wahl" if i == 2 else f"Platz {i+1}"
+        
+        html += f"""
+            <div class="card">
+                <h2>{badge}: {marke} {info['modell']}</h2>
+                <p><b>Vorteil:</b> {info['vorteil']}</p>
+                {"<p class='cadr'><b>CADR:</b> " + info['cadr'] + " m³/h</p>" if info['cadr'] != "0" else ""}
+                <p class="preis">{info['preis']}€</p>
+                <a href="{amazon_link}" target="_blank" class="btn">→ Jetzt bei Amazon prüfen</a>
+            </div>
+        """
+    
+    html += """
+            <div class="card">
+                <h3>🤖 Erstellt mit Jarvis V3</h3>
+                <p>Diese Affiliate-Seite wurde in 3 Sekunden generiert.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html
 
 @app.route('/')
-def home(): return render_template_string(HTML)
+def home():
+    html_template = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Jarvis V3 Geldmaschine</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body { font-family: Arial; padding:20px; background:#0a0a0a; color:white; }
+            input { width:100%; padding:15px; font-size:16px; margin:10px 0; background:#1a1a1a; color:white; border:1px solid #333; border-radius:8px; }
+            button { padding:15px 25px; font-size:18px; margin:5px; background:#FF6600; color:#000; border:none; border-radius:8px; font-weight:bold; }
+            #preview { border:2px solid #FF6600; margin-top:20px; height:500px; width:100%; border-radius:8px; }
+        </style>
+    </head>
+    <body>
+        <h1>🤖 JARVIS V3 - Geldmaschine</h1>
+        <p><b>Beispiel:</b> Bau Seite 3 Luftreiniger mit Levoit Philips Xiaomi</p>
+        <input type="text" id="prompt" placeholder="Dein Befehl für Jarvis...">
+        <button onclick="generieren()">🎤 1. Generieren</button>
+        <button onclick="deploy()">🚀 2. LIVE SCHALTEN</button>
+        <iframe id="preview"></iframe>
 
-@app.route('/', methods=['POST'])
+        <script>
+        let currentHTML = "";
+        function generieren() {
+            const prompt = document.getElementById('prompt').value;
+            fetch('/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({prompt: prompt})
+            })
+            .then(r => r.json())
+            .then(data => {
+                currentHTML = data.html;
+                document.getElementById('preview').srcdoc = currentHTML;
+            });
+        }
+        function deploy() {
+            if(!currentHTML) { alert('Erst Generieren klicken!'); return; }
+            fetch('/deploy', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({html: currentHTML})
+            })
+            .then(r => r.json())
+            .then(data => {
+                alert('💰 LIVE! ' + data.url);
+                window.open(data.url, '_blank');
+            });
+        }
+        </script>
+    </body>
+    </html>
+    '''
+    return render_template_string(html_template)
+
+@app.route('/generate', methods=['POST'])
 def generate():
-    prompt = request.form['prompt']
-    filename, code = generate_site(prompt)
-    return render_template_string(HTML, code=code, filename=filename, prompt=prompt)
+    data = request.get_json()
+    prompt = data.get('prompt', '')
+    html = jarvis_brain(prompt)
+    return jsonify({"html": html})
 
 @app.route('/deploy', methods=['POST'])
 def deploy():
-    code, filename = request.form['code'], request.form['filename']
-    with open(filename, 'w') as f: f.write(code)
-    subprocess.run(['git', 'add', filename])
-    subprocess.run(['git', 'commit', '-m', f'Jarvis Deploy {datetime.datetime.now()}'])
+    data = request.get_json()
+    html = data.get('html', '')
+    with open('index.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+    subprocess.run(['git', 'add', 'index.html'])
+    subprocess.run(['git', 'commit', '-m', f'Jarvis V3: {datetime.now()}'])
     subprocess.run(['git', 'push'])
-    return render_template_string(HTML, deployed=True, filename=filename)
+    return jsonify({"url": "https://19mejialuis84-cloud.github.io/Jarviy-sites/"})
 
-@app.route('/manifest.json')
-def manifest():
-    return {"name":"Jarvis","short_name":"Jarvis","start_url":"/","display":"standalone","background_color":"#0a0a0a","theme_color":"#ff6600","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>","sizes":"512x512"}]}
-
-@app.route('/sw.js')
-def sw(): return 'self.addEventListener("fetch", e => {});', 200, {'Content-Type': 'application/javascript'}
-
-def generate_site(prompt):
-    if "saugroboter" in prompt.lower():
-        return "index.html", """<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>Saugroboter Test</title><style>body{font-family:Arial;max-width:800px;margin:0 auto;padding:20px}.test-box{border:1px solid #ddd;padding:20px;margin:20px 0;border-radius:8px}.winner{border:2px solid #ff6600;background:#fff9f5}.cta-button{display:block;background:#ff6600;color:white;padding:15px;text-align:center;text-decoration:none;border-radius:5px;font-weight:bold;margin-top:15px}h2{color:#ff6600;margin-top:0}</style></head><body><h1>Saugroboter Test 2025: Die 3 Besten für Tierhaare & Teppich</h1><p>Nach 40 Stunden Test: Diese 3 Saugroboter entfernen Hunde- und Katzenhaare wirklich.</p><div class="test-box winner"><h2>1. Testsieger: Roborock S8 MaxV Ultra</h2><p><strong>Bestnote: 1,4</strong> - Beste Saugleistung auf Teppich.</p><a href="ROBOROCK-LINK?tag=fairdeals21-21" class="cta-button">➡️ Zum besten Preis bei Amazon</a></div><div class="test-box"><h2>2. Preis-Leistungs-Sieger: Dreame L40s Pro Ultra</h2><p><strong>Note: 1,6</strong> - Hebt Wischmopps bei Teppich an.</p><a href="DREAME-LINK?tag=fairdeals21-21" class="cta-button">➡️ Zum Angebot bei Amazon</a></div><div class="test-box"><h2>3. Für große Wohnungen: Ecovacs Deebot T80 Omni</h2><p><strong>Note: 1,8</strong> - Eckige Bauform reinigt Kanten besser.</p><a href="ECOVACS-LINK?tag=fairdeals21-21" class="cta-button">➡️ Jetzt auf Amazon ansehen</a></div></body></html>"""
-    return "seite.html", f"<h1>Jarvis baut:</h1><p>{prompt}</p>"
-
-if __name__ == '__main__': app.run(host='0.0.0.0', port=5000)
-
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
