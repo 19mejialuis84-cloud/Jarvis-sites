@@ -1,1 +1,202 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS Site Monitor | fairdeals21-21</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #0a0a0a; 
+            color: #fff; 
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            color: #FFD700;
+            font-size: 2.5em;
+            text-shadow: 0 0 20px rgba(255,215,0,0.5);
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #888;
+            font-size: 1.1em;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto 40px;
+        }
+        .card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .card.online {
+            border-color: #00ff00;
+            box-shadow: 0 0 30px rgba(0,255,0,0.3);
+        }
+        .card.offline {
+            border-color: #ff0000;
+            box-shadow: 0 0 30px rgba(255,0,0,0.3);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .status {
+            font-size: 3em;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .online .status { color: #00ff00; }
+        .offline .status { color: #ff0000; }
+        .loading .status { color: #FFD700; }
+        
+        .site-name {
+            font-size: 1.3em;
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .details {
+            color: #aaa;
+            font-size: 0.9em;
+            margin: 10px 0;
+        }
+        .response-time {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        .btn {
+            background: #FFD700;
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            display: block;
+            margin: 0 auto;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #FFC700;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255,215,0,0.5);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .footer {
+            text-align: center;
+            color: #555;
+            margin-top: 40px;
+            font-size: 0.9em;
+        }
+        .store-id {
+            color: #FFD700;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚡ JARVIS SITE MONITOR</h1>
+        <p>StoreID: <span class="store-id">fairdeals21-21</span> | 0€ Setup | 24/7 Monitoring</p>
+    </div>
 
+    <div class="grid" id="monitor-grid">
+        <!-- Wird per JS gefüllt -->
+    </div>
+
+    <button class="btn" onclick="checkAllSites()" id="checkBtn">🔄 JETZT ALLE PRÜFEN</button>
+
+    <div class="footer">
+        <p>Letzter Check: <span id="lastCheck">Noch nicht geprüft</span></p>
+        <p>JARVIS Monitoring System v2.0 | 0€ Hosting auf GitHub Pages</p>
+    </div>
+
+    <script>
+        const sites = [
+            { name: 'Gaming Stuhl Test 2026', url: 'https://19mejialuis84-cloud.github.io/Jarvis-sites/gaming-stuhl-test-2026/' },
+            { name: 'Luftreiniger Test 2026', url: 'https://19mejialuis84-cloud.github.io/Jarvis-sites/luftreiniger-test-2026/' },
+            { name: 'Powerstation Test 2026', url: 'https://19mejialuis84-cloud.github.io/Jarvis-sites/powerstation-test-2026/' }
+        ];
+
+        function createCard(site, index) {
+            return `
+                <div class="card loading" id="card-${index}">
+                    <div class="site-name">${site.name}</div>
+                    <div class="status">⏳</div>
+                    <div class="details">Prüfe...</div>
+                </div>
+            `;
+        }
+
+        function updateCard(index, status, responseTime, errorMsg) {
+            const card = document.getElementById(`card-${index}`);
+            const isOnline = status === 'online';
+            
+            card.className = `card ${isOnline ? 'online' : 'offline'}`;
+            card.querySelector('.status').textContent = isOnline ? '✅ ONLINE' : '❌ OFFLINE';
+            card.querySelector('.details').innerHTML = isOnline 
+                ? `Response: <span class="response-time">${responseTime}ms</span><br>Erreichbar`
+                : `Fehler: ${errorMsg || 'Timeout'}`;
+        }
+
+        async function checkSite(site, index) {
+            const startTime = Date.now();
+            try {
+                // GitHub Pages blockt fetch wegen CORS, also nutzen wir Image-Trick
+                const img = new Image();
+                const timeout = setTimeout(() => {
+                    updateCard(index, 'offline', 0, 'Timeout >5s');
+                }, 5000);
+
+                img.onload = img.onerror = () => {
+                    clearTimeout(timeout);
+                    const responseTime = Date.now() - startTime;
+                    updateCard(index, 'online', responseTime);
+                };
+                
+                img.src = site.url + 'favicon.ico?' + Date.now();
+                
+            } catch (error) {
+                updateCard(index, 'offline', 0, error.message);
+            }
+        }
+
+        async function checkAllSites() {
+            const btn = document.getElementById('checkBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ PRÜFE...';
+            
+            document.getElementById('monitor-grid').innerHTML = sites.map((site, i) => createCard(site, i)).join('');
+            
+            await Promise.all(sites.map((site, i) => checkSite(site, i)));
+            
+            const now = new Date().toLocaleString('de-DE');
+            document.getElementById('lastCheck').textContent = now;
+            
+            btn.disabled = false;
+            btn.textContent = '🔄 JETZT ALLE PRÜFEN';
+        }
+
+        // Auto-Check beim Laden
+        window.onload = checkAllSites;
+    </script>
+</body>
+</html>
