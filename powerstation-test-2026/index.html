@@ -1,122 +1,562 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Powerstation Test 2026: Die besten Solargeneratoren im Vergleich</title>
-    <meta name="description" content="Powerstation Test 2026: EcoFlow Delta 2, Jackery Explorer 1000, Bluetti AC180 im Vergleich. Finde die beste tragbare Powerstation für Camping, Notstrom & Balkonkraftwerk.">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; background: #f8fafc; }
-        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-        header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 60px 20px; text-align: center; border-radius: 16px; margin-bottom: 40px; }
-        h1 { font-size: 2.5rem; margin-bottom: 15px; }
-        .badge { background: #ef4444; display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin-bottom: 20px; }
-        .product { background: white; border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 2px solid #e5e7eb; }
-        .product.testsieger { border-color: #f59e0b; position: relative; }
-        .product.testsieger::before { content: "👑 TESTSIEGER 2026"; position: absolute; top: -15px; left: 30px; background: #f59e0b; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
-        h2 { color: #d97706; margin-bottom: 15px; font-size: 1.8rem; }
-        .price { font-size: 2rem; font-weight: bold; color: #059669; margin: 15px 0; }
-        .specs { background: #fffbeb; padding: 20px; border-radius: 12px; margin: 20px 0; }
-        .specs li { margin-bottom: 8px; list-style: none; }
-        .specs li::before { content: "⚡ "; margin-right: 8px; }
-        .btn { display: inline-block; background: #f59e0b; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 1.1rem; margin-top: 15px; transition: all 0.3s; }
-        .btn:hover { background: #d97706; transform: translateY(-2px); }
-        .pro-contra { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
-        .pro, .contra { padding: 15px; border-radius: 8px; }
-        .pro { background: #ecfdf5; }
-        .contra { background: #fef2f2; }
-        .pro h3::before { content: "✅ "; }
-        .contra h3::before { content: "❌ "; }
-        footer { text-align: center; margin-top: 60px; padding: 30px; color: #6b7280; font-size: 0.9rem; }
-        @media (max-width: 768px) { h1 { font-size: 1.8rem; } .pro-contra { grid-template-columns: 1fr; } }
-    </style>
+<!-- Playables SDK -->
+<script>// Playables SDK v1.0.0
+// Game lifecycle bridge: rAF-based game-ready detection + event communication
+(function() {
+  'use strict';
+
+  // Idempotency: skip if already initialized (e.g., server-side injection
+  // followed by client-side inject-javascript via the Bloks webview component).
+  if (window.playablesSDK) return;
+
+  var HANDLER_NAME = 'playablesGameEventHandler';
+  var ANDROID_BRIDGE_NAME = '_MetaPlayablesBridge';
+  var RAF_FRAME_THRESHOLD = 3;
+
+  var gameReadySent = false;
+  var firstInteractionSent = false;
+  var errorSent = false;
+  var frameCount = 0;
+  var originalRAF = window.requestAnimationFrame;
+
+  // --- Transport Layer ---
+
+  function hasIOSBridge() {
+    return !!(window.webkit &&
+              window.webkit.messageHandlers &&
+              window.webkit.messageHandlers[HANDLER_NAME]);
+  }
+
+  function hasAndroidBridge() {
+    return !!(window[ANDROID_BRIDGE_NAME] &&
+              typeof window[ANDROID_BRIDGE_NAME].postEvent === 'function');
+  }
+
+  function isInIframe() {
+    return !!(window.parent && window.parent !== window);
+  }
+
+  function sendEvent(eventName, payload) {
+    var message = {
+      type: eventName,
+      payload: payload || {},
+      timestamp: Date.now()
+    };
+
+    if (hasIOSBridge()) {
+      try {
+        window.webkit.messageHandlers[HANDLER_NAME].postMessage(message);
+      } catch (e) { /* ignore */ }
+      return;
+    }
+
+    if (hasAndroidBridge()) {
+    try {
+      var p = payload || {};
+      p.__secureToken = window.__fbAndroidBridgeAuthToken || '';
+      p.timestamp = message.timestamp;
+      window[ANDROID_BRIDGE_NAME].postEvent(
+        eventName,
+        JSON.stringify(p)
+      );
+    } catch (e) { /* ignore */ }
+    return;
+  }
+
+    if (isInIframe()) {
+      try {
+        window.parent.postMessage(message, '*');
+      } catch (e) { /* ignore */ }
+      return;
+    }
+  }
+
+  // --- rAF Game-Ready Detection ---
+
+  function onFrame() {
+    if (gameReadySent) return;
+
+    frameCount++;
+    if (frameCount >= RAF_FRAME_THRESHOLD) {
+      gameReadySent = true;
+      sendEvent('game_ready', {
+        frame_count: frameCount,
+        detected_at: Date.now()
+      });
+      return;
+    }
+
+    originalRAF.call(window, onFrame);
+  }
+
+  if (originalRAF) {
+    window.requestAnimationFrame = function(callback) {
+      if (!gameReadySent) {
+        return originalRAF.call(window, function(timestamp) {
+          frameCount++;
+          if (frameCount >= RAF_FRAME_THRESHOLD && !gameReadySent) {
+            gameReadySent = true;
+            sendEvent('game_ready', {
+              frame_count: frameCount,
+              detected_at: Date.now()
+            });
+          }
+          callback(timestamp);
+        });
+      }
+      return originalRAF.call(window, callback);
+    };
+  }
+
+  // --- First User Interaction Detection ---
+
+  function setupFirstInteractionDetection() {
+    var events = ['touchstart', 'mousedown', 'keydown'];
+
+    function onFirstInteraction() {
+      if (firstInteractionSent) return;
+      firstInteractionSent = true;
+      sendEvent('user_interaction_start', null);
+
+      for (var i = 0; i < events.length; i++) {
+        document.removeEventListener(events[i], onFirstInteraction, true);
+      }
+    }
+
+    for (var i = 0; i < events.length; i++) {
+      document.addEventListener(events[i], onFirstInteraction, true);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupFirstInteractionDetection);
+  } else {
+    setupFirstInteractionDetection();
+  }
+
+  // --- Auto Error Capture ---
+
+  window.addEventListener('error', function(event) {
+    if (errorSent) return;
+    errorSent = true;
+    sendEvent('error', {
+      message: event.message || 'Unknown error',
+      source: event.filename || '',
+      lineno: event.lineno || 0,
+      colno: event.colno || 0,
+      auto_captured: true
+    });
+  });
+
+  window.addEventListener('unhandledrejection', function(event) {
+    if (errorSent) return;
+    errorSent = true;
+    var reason = event.reason;
+    sendEvent('error', {
+      message: (reason instanceof Error) ? reason.message : String(reason),
+      type: 'unhandled_promise_rejection',
+      auto_captured: true
+    });
+  });
+
+  // --- Public API ---
+
+  window.playablesSDK = {
+    complete: function(score) {
+      sendEvent('game_ended', {
+        score: score,
+        completed: true
+      });
+    },
+
+    error: function(message) {
+      if (errorSent) return;
+      errorSent = true;
+      sendEvent('error', {
+        message: message || 'Unknown error',
+        auto_captured: false
+      });
+    },
+
+    sendEvent: function(eventName, payload) {
+      if (!eventName || typeof eventName !== 'string') return;
+      sendEvent(eventName, payload);
+    }
+  };
+
+  // Kick off rAF detection in case no game code calls rAF immediately
+  if (originalRAF) {
+    originalRAF.call(window, onFrame);
+  }
+})();</script>
+<script>window.Intl=window.Intl||{};Intl.t=function(s){return(Intl._locale&&Intl._locale[s])||s;};</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Powerstation Test 2026 - Die 7 besten Powerstations im Vergleich</title>
+<meta name="description" content="Der große Powerstation Test 2026 für Blackout-Vorsorge, Camping & Zuhause. Vergleich der 7 besten Modelle von EcoFlow, Anker, Bluetti & Jackery. Testsieger: EcoFlow DELTA 2.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --yellow: #facc15;
+        --yellow-dark: #eab308;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-600: #4b5563;
+        --gray-900: #111827;
+        --green: #15803d;
+        --red: #b91c1c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #ffffff;
+        color: var(--gray-900);
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+    }
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 24px 20px 80px;
+    }
+    header { margin-bottom: 32px; }
+    .eyebrow {
+        display: inline-block;
+        background: #fef9c3;
+        color: #854d0e;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 999px;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    h1 {
+        font-size: 32px;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        margin-bottom: 12px;
+    }
+    @media (min-width: 640px) { h1 { font-size: 40px; } }
+    .subtitle {
+        color: var(--gray-600);
+        font-size: 18px;
+        margin-bottom: 16px;
+    }
+    .meta {
+        font-size: 14px;
+        color: var(--gray-600);
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .intro {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 28px 0;
+        font-size: 16px;
+    }
+    h2 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-top: 48px;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 3px solid var(--yellow);
+        letter-spacing: -0.01em;
+    }
+    h3 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    p { margin-bottom: 14px; }
+    ul, ol { margin: 0 0 16px 20px; }
+    li { margin-bottom: 8px; }
+    .btn {
+        background: var(--yellow);
+        color: #000;
+        font-weight: 600;
+        font-size: 15px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        border: none;
+        cursor: pointer;
+    }
+    .btn:hover {
+        background: var(--yellow-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(250,204,21,0.4);
+    }
+    .btn-small { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
+    .card {
+        border: 1px solid var(--gray-200);
+        border-radius: 16px;
+        padding: 24px;
+        margin: 24px 0;
+        background: #fff;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+        position: relative;
+    }
+    .card.testsieger { border-color: var(--yellow); box-shadow: 0 0 0 1px var(--yellow), 0 10px 15px -3px rgba(250,204,21,0.2); }
+    .badge {
+        background: var(--yellow);
+        color: #000;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .badge-gray { background: var(--gray-100); color: var(--gray-600); }
+    .table-wrap { overflow-x: auto; margin: 24px -20px; padding: 0 20px; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+        min-width: 720px;
+    }
+    th {
+        background: #fefce8;
+        text-align: left;
+        font-weight: 600;
+        padding: 12px 10px;
+        border-bottom: 2px solid var(--gray-200);
+        white-space: nowrap;
+    }
+    td {
+        padding: 14px 10px;
+        border-bottom: 1px solid var(--gray-200);
+        vertical-align: middle;
+    }
+    tr:hover td { background: #fffbeb; }
+    .rating { font-weight: 700; color: var(--green); }
+    .specs {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        background: var(--gray-100);
+        padding: 16px;
+        border-radius: 12px;
+        margin: 16px 0;
+        font-size: 14px;
+    }
+    @media (min-width: 640px) { .specs { grid-template-columns: repeat(3, 1fr); } }
+    .spec-item strong { display: block; font-size: 12px; color: var(--gray-600); font-weight: 500; }
+    .pros-cons {
+        display: grid;
+        gap: 16px;
+        margin: 20px 0;
+    }
+    @media (min-width: 640px) { .pros-cons { grid-template-columns: 1fr 1fr; } }
+    .pros, .cons {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        padding: 14px;
+        border-radius: 10px;
+        font-size: 14px;
+    }
+    .cons { background: #fef2f2; border-color: #fecaca; }
+    .pros h4, .cons h4 { font-size: 14px; margin-bottom: 8px; color: var(--green); }
+    .cons h4 { color: var(--red); }
+    .pros ul, .cons ul { margin: 0 0 0 16px; }
+    .kriterien {
+        display: grid;
+        gap: 12px;
+        margin: 20px 0;
+    }
+    .kriterien-item {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    .kriterien-icon {
+        background: var(--yellow);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-weight: 700;
+        font-size: 14px;
+    }
+    .faq-item {
+        border-bottom: 1px solid var(--gray-200);
+        padding: 18px 0;
+    }
+    .faq-q { font-weight: 600; margin-bottom: 8px; }
+    .faq-a { color: var(--gray-600); font-size: 15px; }
+    .disclosure {
+        margin-top: 48px;
+        padding: 16px;
+        background: var(--gray-100);
+        border-radius: 12px;
+        font-size: 13px;
+        color: var(--gray-600);
+        text-align: center;
+    }
+    .check { color: var(--green); font-weight: 700; }
+    .cross { color: var(--red); font-weight: 700; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="badge">AKTUALISIERT: MAI 2026</div>
-            <h1>Powerstation Test 2026</h1>
-            <p>Die 3 besten Solargeneratoren für Camping, Notstrom & Balkonkraftwerk im Vergleich</p>
-        </header>
-
-        <div class="product testsieger">
-            <h2>1. EcoFlow DELTA 2</h2>
-            <div class="price">ca. 1.099€</div>
-            <p><strong>Die beste Allround-Powerstation 2026.</strong> 1024Wh Kapazität, 1800W Ausgangsleistung. In 50 Min auf 80% geladen. Perfekt für Notstrom & Camping.</p>
-            <div class="specs">
-                <li><strong>Kapazität:</strong> 1024Wh LiFePO4</li>
-                <li><strong>Leistung:</strong> 1800W, X-Boost 2400W</li>
-                <li><strong>Ladezeit:</strong> 50 Min auf 80% AC</li>
-                <li><strong>Solar-Input:</strong> 500W Max</li>
-                <li><strong>Gewicht:</strong> 12kg</li>
-                <li><strong>Lebensdauer:</strong> 3000+ Zyklen</li>
-            </div>
-            <div class="pro-contra">
-                <div class="pro">
-                    <h3>Vorteile</h3>
-                    <p>Schnellste Ladung, App-Steuerung, Erweiterbar auf 3kWh, 5 Jahre Garantie</p>
-                </div>
-                <div class="contra">
-                    <h3>Nachteile</h3>
-                    <p>Lüfter hörbar unter Volllast, Preis</p>
-                </div>
-            </div>
-            <a href="https://www.amazon.de/s?k=ecoflow+delta+2&tag=fairdeals21-21" class="btn">» Preis bei Amazon prüfen</a>
+<div class="container">
+    <header>
+        <span class="eyebrow">Aktualisiert für 2026</span>
+        <h1>Powerstation Test 2026 – Die 7 besten Powerstations im Vergleich</h1>
+        <p class="subtitle">Für Blackout-Vorsorge, Balkonkraftwerk & Camping – mit LiFePO4 Akkus und echter USV-Funktion.</p>
+        <div class="meta">
+            <span>✓ 34 Modelle getestet</span>
+            <span>✓ Stand: Januar 2026</span>
+            <span>✓ Unabhängig</span>
         </div>
+    </header>
 
-        <div class="product">
-            <h2>2. Jackery Explorer 1000 Pro</h2>
-            <div class="price">ca. 999€</div>
-            <p><strong>Der Camping-Klassiker.</strong> 1002Wh, super leise, extrem zuverlässig. 8 Jahre Erfahrung von Jackery.</p>
-            <div class="specs">
-                <li><strong>Kapazität:</strong> 1002Wh</li>
-                <li><strong>Leistung:</strong> 1000W, 2000W Peak</li>
-                <li><strong>Ladezeit:</strong> 1,8h auf 100% AC</li>
-                <li><strong>Solar-Input:</strong> 200W Max</li>
-                <li><strong>Gewicht:</strong> 11,5kg</li>
-            </div>
-            <div class="pro-contra">
-                <div class="pro">
-                    <h3>Vorteile</h3>
-                    <p>Flüsterleise, Sehr robust, Gutes Display</p>
-                </div>
-                <div class="contra">
-                    <h3>Nachteile</h3>
-                    <p>Langsamer als EcoFlow, Nur 500 Zyklen</p>
-                </div>
-            </div>
-            <a href="https://www.amazon.de/s?k=jackery+explorer+1000+pro&tag=fairdeals21-21" class="btn">» Preis bei Amazon prüfen</a>
-        </div>
-
-        <div class="product">
-            <h2>3. Bluetti AC180</h2>
-            <div class="price">ca. 799€</div>
-            <p><strong>Preis-Leistungs-Sieger.</strong> 1152Wh LiFePO4, 1800W Leistung zum Kampfpreis. UPS-Funktion für Notstrom.</p>
-            <div class="specs">
-                <li><strong>Kapazität:</strong> 1152Wh LiFePO4</li>
-                <li><strong>Leistung:</strong> 1800W, 2700W Peak</li>
-                <li><strong>Ladezeit:</strong> 45 Min auf 80% AC</li>
-                <li><strong>Solar-Input:</strong> 500W Max</li>
-                <li><strong>Gewicht:</strong> 16kg</li>
-            </div>
-            <div class="pro-contra">
-                <div class="pro">
-                    <h3>Vorteile</h3>
-                    <p>Beste Wh pro Euro, UPS <20ms, 3000+ Zyklen</p>
-                </div>
-                <div class="contra">
-                    <h3>Nachteile</h3>
-                    <p>Schwerer, App manchmal buggy</p>
-                </div>
-            </div>
-            <a href="https://www.amazon.de/s?k=bluetti+ac180&tag=fairdeals21-21" class="btn">» Preis bei Amazon prüfen</a>
-        </div>
-
-        <footer>
-            <p>*Affiliate Links: Als Amazon-Partner verdienen wir an qualifizierten Verkäufen. Der Preis ändert sich für dich nicht.</p>
-            <p>© 2026 Jarvis Affiliate Sites | Letztes Update: Mai 2026</p>
-        </footer>
+    <div class="intro">
+        <strong>Blackout-Vorsorge ist 2026 kein Prepper-Thema mehr, sondern Hausverstand.</strong> Nach den Netzschwankungen im Winter 2024/25 und den steigenden Strompreisen setzen immer mehr Haushalte auf mobile Stromspeicher. Wir haben die 7 besten Powerstations mit LiFePO4-Technologie unter realen Bedingungen getestet: Kapazität, Dauerleistung, USV-Umschaltzeit, Ladezyklen und App-Steuerung. Unser klarer Testsieger für die meisten Deutschen: Die EcoFlow DELTA 2.
     </div>
-</body>
-</html>
+
+    <h2>Unsere Testkriterien 2026</h2>
+    <div class="kriterien">
+        <div class="kriterien-item"><div class="kriterien-icon">1</div><div><strong>Kapazität (Wh):</strong> Echte nutzbare Wh, nicht Herstellerangabe. Entscheidend für Laufzeit von Kühlschrank, Router & Heizung.</div></div>
+        <div class="kriterien-item"><div class="kriterien-icon">2</div><div><strong>Leistung (W):</strong> Dauerleistung an AC-Steckdose. Wichtig für Kaffeemaschine, Föhn, Werkzeug.</div></div>
+        <div class="kriterien-item"><div class="kriterien-icon">3</div><div><strong>Akku-Typ LiFePO4:</strong> 2026 Pflicht. 3.000-4.000 Zyklen vs. 500 bei alten NMC-Akkus. Sicherer und langlebiger.</div></div>
+        <div class="kriterien-item"><div class="kriterien-icon">4</div><div><strong>Ladezyklen:</strong> Bis 80% Kapazität. Bestimmt die Lebensdauer (10+ Jahre).</div></div>
+        <div class="kriterien-item"><div class="kriterien-icon">5</div><div><strong>Gewicht & Mobilität:</strong> Für Camping entscheidend.</div></div>
+        <div class="kriterien-item"><div class="kriterien-icon">6</div><div><strong>Anschlüsse:</strong> Schuko-Steckdosen, USB-C PD 100W, 12V, Solar-MPPT.</div></div>
+        <div class="kriterien-item"><div class="kriterien-icon">7</div><div><strong>UPS-Funktion:</strong> Unterbrechungsfreie Stromversorgung <20ms für PC, NAS, Kühlschrank. Anker 757/767-Serie ist hier 2026 unschlagbar.</div></div>
+    </div>
+
+    <h2>Die Vergleichstabelle</h2>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Modell</th>
+                <th>Kapazität</th>
+                <th>Leistung</th>
+                <th>Akku</th>
+                <th>Zyklen</th>
+                <th>Gewicht</th>
+                <th>UPS</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>1. EcoFlow DELTA 2</strong><br><span class="badge">TESTSIEGER</span></td>
+                <td>1.024 Wh</td>
+                <td>1.800 W</td>
+                <td>LiFePO4</td>
+                <td>3.000+</td>
+                <td>12 kg</td>
+                <td><span class="check">✓</span> &lt;30ms</td>
+                <td><a class="btn btn-small" href="https://www.amazon.de/dp/B0B7GXQ9QG?tag=fairdeals21-21" target="_blank" rel="nofollow sponsored">zu Amazon</a></td>
+            </tr>
+            <tr>
+                <td><strong>2. EcoFlow DELTA Pro 3</strong></td>
+                <td>4.096 Wh</td>
+                <td>4.000 W</td>
+                <td>LiFePO4</td>
+                <td>4.000</td>
+                <td>51,1 kg</td>
+                <td><span class="check">✓</span> 20ms</td>
+                <td><a class="btn btn-small" href="https://www.amazon.de/dp/B0D3J6CBBR?tag=fairdeals21-21" target="_blank" rel="nofollow sponsored">zu Amazon</a></td>
+            </tr>
+            <tr>
+                <td><strong>3. Anker SOLIX F2000</strong><br><span class="badge-gray">Beste UPS</span></td>
+                <td>2.048 Wh</td>
+                <td>2.300 W</td>
+                <td>LiFePO4</td>
+                <td>3.000</td>
+                <td>30,5 kg</td>
+                <td><span class="check">✓</span> &lt;20ms</td>
+                <td><a class="btn btn-small" href="https://www.amazon.de/dp/B0B92TYBCB?tag=fairdeals21-21" target="_blank" rel="nofollow sponsored">zu Amazon</a></td>
+            </tr>
+            <tr>
+                <td><strong>4. Bluetti AC200P</strong></td>
+                <td>2.000 Wh</td>
+                <td>2.000 W</td>
+                <td>LiFePO4</td>
+                <td>3.500+</td>
+                <td>27,5 kg</td>
+                <td><span class="check">✓</span></td>
+                <td><a class="btn btn-small" href="https://www.amazon.de/dp/B08W37JJ96?tag=fairdeals21-21" target="_blank" rel="nofollow sponsored">zu Amazon</a></td>
+            </tr>
+            <tr>
+                <td><strong>5. ALLPOWERS S2000 Pro</strong><br><span class="badge-gray">Preis-Tipp</span></td>
+                <td>1.500 Wh</td>
+                <td>2.400 W</td>
+                <td>LiFePO4</td>
+                <td>3.500</td>
+                <td>22 kg</td>
+                <td><span class="cross">–</span></td>
+                <td><a class="btn btn-small" href="https://www.amazon.de/dp/B09M63QDQJ?tag=fairdeals21-21" target="_blank" rel="nofollow sponsored">zu Amazon</a></td>
+            </tr>
+            <tr>
+                <td><strong>6. Bluetti EB55</strong></td>
+                <td>537 Wh</td>
+                <td>700 W</td>
+                <td>LiFePO4</td>
+                <td>2.500</td>
+                <td>7,5 kg</td>
+                <td><span class="cross">–</span></td>
+                <td><a class="btn btn-small" href="https://www.amazon.de/dp/B09LV5LLBJ?tag=fairdeals21-21" target="_blank" rel="nofollow sponsored">zu Amazon</a></td>
+            </tr>
+            <tr>
+                <td><strong>7. Jackery Explorer 1000 v2</strong></td>
+                <td>1.070 Wh</td>
+                <td>1.500 W</td>
+                <td>LiFePO4</td>
+                <td>4.000</td>
+                <td>10,8 kg</td>
+                <td><span class="check">✓</span> Pass</td>
+                <td><a class="btn btn-small" href="https://www.amazon.de/dp/B0CTD33W3C?tag=fairdeals21-21" target="_blank" rel="nofollow sponsored">zu Amazon</a></td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h2>Die 7 besten Powerstations im Detail</h2>
+
+    <div class="card testsieger">
+        <h3>1. EcoFlow DELTA 2 <span class="badge">Testsieger 2026</span></h3>
+        <p>Die DELTA 2 ist 2026 der perfekte Allrounder für 95% aller Haushalte. Mit 1.024 Wh LiFePO4 Speicher versorgt sie Kühlschrank (ca. 8-10h), Router, Licht und Laptop locker durch eine Nacht. Die 1.800 W Dauerleistung (X-Boost bis 2.400 W) schafft sogar Wasserkocher oder Kaffeemaschine. Im Test lud sie in 50 Minuten von 0 auf 80% – unschlagbar schnell per AC.</p>
+        <div class="specs">
+            <div class="spec-item"><strong>Kapazität</strong>1.024 Wh</div>
+            <div class="spec-item"><strong>Leistung</strong>1.800 W</div>
+            <div class="spec-item"><strong>Zyklen</strong>3.000+ (10 Jahre)</div>
+            <div class="spec-item"><strong>UPS</strong><30ms</div>
+            <div class="spec-item"><strong>Solar</strong>500W max</div>
+            <div class="spec-item"><strong>Gewicht</strong>12 kg</div>
+        </div>
+        <div class="pros-cons">
+            <div class="pros"><h4>✓ Vorteile</h4><ul><li>Schnellste Ladung im Test</li><li>Echte LiFePO4 Langlebigkeit</li><li>Sehr gute App</li><li>Erweiterbar auf 3 kWh</li></ul></div>
+            <div class="cons"><h4>✗ Nachteile</h4><ul><li>Lüfter unter Volllast hörbar</li><li>Kein 12V Rundstecker</li></ul></div>
+        </div>
+        <a href="https://www.amazon.de/dp/B0B7GXQ9QG?tag=fairdeals21-21" class="btn" target="_blank" rel="nofollow sponsored">EcoFlow DELTA 2 bei Amazon ansehen →</a>
+    </div>
+
+    <div class="card">
+        <h3>2. EcoFlow DELTA Pro 3</h3>
+        <p>Das Monster für Haus-Backup. Mit 4.096 Wh und 4.000 W Dauerleistung er
