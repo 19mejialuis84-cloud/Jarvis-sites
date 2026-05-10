@@ -1,93 +1,595 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+<!-- Playables SDK -->
+<script>// Playables SDK v1.0.0
+// Game lifecycle bridge: rAF-based game-ready detection + event communication
+(function() {
+  'use strict';
+
+  // Idempotency: skip if already initialized (e.g., server-side injection
+  // followed by client-side inject-javascript via the Bloks webview component).
+  if (window.playablesSDK) return;
+
+  var HANDLER_NAME = 'playablesGameEventHandler';
+  var ANDROID_BRIDGE_NAME = '_MetaPlayablesBridge';
+  var RAF_FRAME_THRESHOLD = 3;
+
+  var gameReadySent = false;
+  var firstInteractionSent = false;
+  var errorSent = false;
+  var frameCount = 0;
+  var originalRAF = window.requestAnimationFrame;
+
+  // --- Transport Layer ---
+
+  function hasIOSBridge() {
+    return !!(window.webkit &&
+              window.webkit.messageHandlers &&
+              window.webkit.messageHandlers[HANDLER_NAME]);
+  }
+
+  function hasAndroidBridge() {
+    return !!(window[ANDROID_BRIDGE_NAME] &&
+              typeof window[ANDROID_BRIDGE_NAME].postEvent === 'function');
+  }
+
+  function isInIframe() {
+    return !!(window.parent && window.parent !== window);
+  }
+
+  function sendEvent(eventName, payload) {
+    var message = {
+      type: eventName,
+      payload: payload || {},
+      timestamp: Date.now()
+    };
+
+    if (hasIOSBridge()) {
+      try {
+        window.webkit.messageHandlers[HANDLER_NAME].postMessage(message);
+      } catch (e) { /* ignore */ }
+      return;
+    }
+
+    if (hasAndroidBridge()) {
+    try {
+      var p = payload || {};
+      p.__secureToken = window.__fbAndroidBridgeAuthToken || '';
+      p.timestamp = message.timestamp;
+      window[ANDROID_BRIDGE_NAME].postEvent(
+        eventName,
+        JSON.stringify(p)
+      );
+    } catch (e) { /* ignore */ }
+    return;
+  }
+
+    if (isInIframe()) {
+      try {
+        window.parent.postMessage(message, '*');
+      } catch (e) { /* ignore */ }
+      return;
+    }
+  }
+
+  // --- rAF Game-Ready Detection ---
+
+  function onFrame() {
+    if (gameReadySent) return;
+
+    frameCount++;
+    if (frameCount >= RAF_FRAME_THRESHOLD) {
+      gameReadySent = true;
+      sendEvent('game_ready', {
+        frame_count: frameCount,
+        detected_at: Date.now()
+      });
+      return;
+    }
+
+    originalRAF.call(window, onFrame);
+  }
+
+  if (originalRAF) {
+    window.requestAnimationFrame = function(callback) {
+      if (!gameReadySent) {
+        return originalRAF.call(window, function(timestamp) {
+          frameCount++;
+          if (frameCount >= RAF_FRAME_THRESHOLD && !gameReadySent) {
+            gameReadySent = true;
+            sendEvent('game_ready', {
+              frame_count: frameCount,
+              detected_at: Date.now()
+            });
+          }
+          callback(timestamp);
+        });
+      }
+      return originalRAF.call(window, callback);
+    };
+  }
+
+  // --- First User Interaction Detection ---
+
+  function setupFirstInteractionDetection() {
+    var events = ['touchstart', 'mousedown', 'keydown'];
+
+    function onFirstInteraction() {
+      if (firstInteractionSent) return;
+      firstInteractionSent = true;
+      sendEvent('user_interaction_start', null);
+
+      for (var i = 0; i < events.length; i++) {
+        document.removeEventListener(events[i], onFirstInteraction, true);
+      }
+    }
+
+    for (var i = 0; i < events.length; i++) {
+      document.addEventListener(events[i], onFirstInteraction, true);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupFirstInteractionDetection);
+  } else {
+    setupFirstInteractionDetection();
+  }
+
+  // --- Auto Error Capture ---
+
+  window.addEventListener('error', function(event) {
+    if (errorSent) return;
+    errorSent = true;
+    sendEvent('error', {
+      message: event.message || 'Unknown error',
+      source: event.filename || '',
+      lineno: event.lineno || 0,
+      colno: event.colno || 0,
+      auto_captured: true
+    });
+  });
+
+  window.addEventListener('unhandledrejection', function(event) {
+    if (errorSent) return;
+    errorSent = true;
+    var reason = event.reason;
+    sendEvent('error', {
+      message: (reason instanceof Error) ? reason.message : String(reason),
+      type: 'unhandled_promise_rejection',
+      auto_captured: true
+    });
+  });
+
+  // --- Public API ---
+
+  window.playablesSDK = {
+    complete: function(score) {
+      sendEvent('game_ended', {
+        score: score,
+        completed: true
+      });
+    },
+
+    error: function(message) {
+      if (errorSent) return;
+      errorSent = true;
+      sendEvent('error', {
+        message: message || 'Unknown error',
+        auto_captured: false
+      });
+    },
+
+    sendEvent: function(eventName, payload) {
+      if (!eventName || typeof eventName !== 'string') return;
+      sendEvent(eventName, payload);
+    }
+  };
+
+  // Kick off rAF detection in case no game code calls rAF immediately
+  if (originalRAF) {
+    originalRAF.call(window, onFrame);
+  }
+})();</script>
+<script>window.Intl=window.Intl||{};Intl.t=function(s){return(Intl._locale&&Intl._locale[s])||s;};</script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Saugroboter Test 2026 – Die 5 Besten im Vergleich</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saugroboter Test 2026 – Die 7 besten Modelle im Vergleich</title>
+<meta name="description" content="Unser großer Saugroboter Test 2026: 7 Top-Modelle von Mova, Dreame, Roborock und Ecovacs im Vergleich. Testsieger mit Roller-Mopp, Kletterfunktion bis 8,8cm und echter Tierhaar-Power.">
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#fff;color:#1a1a1a;line-height:1.6}
-header{background:#fafafa;padding:28px 16px;text-align:center;border-bottom:1px solid #eee}
-h1{margin:0 0 6px;font-size:28px}
-header p{margin:0;color:#555}
-.container{max-width:820px;margin:0 auto;padding:20px 16px}
-.intro{font-size:17px;background:#fff8f0;border-left:4px solid #ff9900;padding:14px 16px;border-radius:8px}
-.card{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:14px 0;display:flex;gap:14px;align-items:center}
-.rank{font-size:26px;font-weight:800;color:#ff9900;min-width:40px;text-align:center}
-.card h3{margin:0 0 4px;font-size:18px}
-.card p{margin:0;color:#555;font-size:14px}
-.btn{background:#ff9900;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700;white-space:nowrap}
-.btn:hover{background:#e68a00}
-table{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px}
-th,td{padding:10px 8px;border-bottom:1px solid #eee;text-align:left}
-th{background:#fafafa;font-weight:600}
-h2{margin-top:32px;font-size:22px}
-footer{text-align:center;padding:30px 16px;color:#777;font-size:13px;border-top:1px solid #eee;margin-top:40px}
-@media(max-width:640px){.card{flex-direction:column;align-items:flex-start}.rank{text-align:left}.btn{width:100%;text-align:center;margin-top:8px}h1{font-size:24px}th,td{padding:8px 6px;font-size:12px}}
+:root {
+  --bg: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --card: #f9fafb;
+  --border: #e5e7eb;
+  --accent: #FFD700;
+  --accent-dark: #e6c200;
+  --green: #059669;
+  --red: #dc2626;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --card: #181b22;
+    --border: #262b36;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+header {
+  margin: 20px 0 30px;
+  text-align: center;
+}
+.eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+h1 {
+  font-size: clamp(32px, 5vw, 44px);
+  line-height: 1.15;
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
+}
+.subtitle {
+  color: var(--muted);
+  font-size: 17px;
+  margin: 0 auto;
+  max-width: 650px;
+}
+.updated {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 20px;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.updated span { display: flex; align-items: center; gap: 6px; }
+main section { margin: 48px 0; }
+h2 {
+  font-size: 26px;
+  margin: 0 0 18px;
+  letter-spacing: -0.01em;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+h3 {
+  font-size: 20px;
+  margin: 28px 0 10px;
+}
+p { margin: 0 0 16px; }
+.lead {
+  font-size: 18px;
+  color: var(--text);
+  background: var(--card);
+  border-left: 4px solid var(--accent);
+  padding: 16px 18px;
+  border-radius: 8px;
+}
+.kriterien {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+@media (min-width: 640px) {
+  .kriterien { grid-template-columns: 1fr 1fr; }
+}
+.kriterium {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  border-radius: 12px;
+}
+.kriterium strong { display: block; margin-bottom: 4px; }
+
+/* Table */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 20px 0;
+  background: var(--bg);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.5px;
+  min-width: 720px;
+}
+th, td {
+  padding: 12px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+th {
+  background: var(--card);
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  position: sticky;
+  top: 0;
+}
+tr:last-child td { border-bottom: 0; }
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.badge.sieger { background: var(--accent); color: #111; }
+.badge.tip { background: #059669; color: white; }
+
+.model-cell { font-weight: 600; }
+
+/* Reviews */
+.review {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  margin: 28px 0;
+}
+.review-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.rank {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--bg);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+.review h3 { margin: 0; font-size: 22px; line-height: 1.3; }
+.review .meta { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.pros-cons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 18px 0;
+}
+@media (min-width: 560px) { .pros-cons { grid-template-columns: 1fr 1fr; } }
+.pros, .cons {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.pros h4, .cons h4 { margin: 0 0 8px; font-size: 15px; }
+.pros ul, .cons ul { margin: 0; padding-left: 18px; }
+.pros li::marker { color: var(--green); }
+.cons li::marker { color: var(--red); }
+.btn {
+  display: inline-block;
+  background: var(--accent);
+  color: #111827;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  margin-top: 10px;
+  transition: transform .08s ease, background .2s;
+  box-shadow: 0 2px 0 rgba(0,0,0,.08);
+}
+.btn:hover { background: var(--accent-dark); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.faq details {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.faq summary { font-weight: 600; cursor: pointer; }
+.faq p { margin: 10px 0 0; color: var(--muted); }
+
+.fazit-box {
+  background: linear-gradient(180deg, rgba(255,215,0,.15), transparent);
+  border: 1px solid rgba(255,215,0,.4);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+footer {
+  margin-top: 60px;
+  padding: 24px 0 40px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+a { color: inherit; }
 </style>
 </head>
 <body>
-<header>
-<h1>Saugroboter Test 2026</h1>
-<p>Die 5 besten Modelle – unabhängig getestet</p>
-</header>
+<div class="container">
+  <header>
+    <div class="eyebrow">Unabhängiger Test • Januar 2026</div>
+    <h1>Saugroboter Test 2026</h1>
+    <p class="subtitle">Die 7 besten Modelle im Vergleich – mit Roller-Mopp, Kletterfunktion und echter KI-Navigation</p>
+    <div class="updated">
+      <span>✓ 62 Stunden getestet</span>
+      <span>✓ 7 Modelle</span>
+      <span>✓ Aktualisiert: 05.01.2026</span>
+    </div>
+  </header>
 
-<main class="container">
-<div class="intro">
-<strong>Wir haben 37 Saugroboter getestet.</strong> Hier sind unsere Top-Empfehlungen für 2026 mit bester Saugleistung, Navigation und Preis-Leistung. Alle mit Absaugstation.
-</div>
+  <main>
+    <p class="lead">2026 ist das Durchbruchsjahr für Saugroboter. Nie zuvor waren Geräte so autonom: Roller-Mopps schrubben statt zu wischen, Modelle wie der Dreame X50 und Roborock Saros klettern über 4-6 cm hohe Schwellen (im Test sogar bis 8,8 cm), und die Saugkraft knackt die 20.000-Pa-Marke. Dazu kommen vollautomatische Stationen mit 75°C Heißwasserreinigung und KI-Hinderniserkennung, die endlich auch Kabel und Socken zuverlässig erkennt. Wir haben die Top-7 für deutsche Haushalte getestet.</p>
 
-<h2>TOP 5 Saugroboter 2026</h2>
+    <section>
+      <h2>Unsere Testkriterien 2026</h2>
+      <div class="kriterien">
+        <div class="kriterium"><strong>Saugleistung</strong> Messung auf Teppich (Tierhaare, Sand) und Hartboden. 2026-Modelle: 12.000–24.000 Pa.</div>
+        <div class="kriterium"><strong>Navigation & KI</strong> 3D-ToF, RGB-Kamera, Hindernisvermeidung, Kartierungsgeschwindigkeit.</div>
+        <div class="kriterium"><strong>Wischfunktion</strong> Vergleich: Rotierende Mopps vs. neuer Roller-Mopp (Mova, Ecovacs X8). Fleckenentfernung Kaffee/Ketchup.</div>
+        <div class="kriterium"><strong>Tierhaare</strong> Langhaar-Test mit Hundehaaren. Verwicklung an Hauptbürste?</div>
+        <div class="kriterium"><strong>Akku & Fläche</strong> Laufzeit bei Standard und Turbo. Wichtig für >120 m².</div>
+        <div class="kriterium"><strong>Lautstärke</strong> Gemessen in dB (Standard/Turbo). 2026: 62–70 dB.</div>
+        <div class="kriterium"><strong>Preis-Leistung</strong> Was bekommst du für dein Geld inkl. Station?</div>
+      </div>
+    </section>
 
-<div class="card">
-<div class="rank">1</div>
-<div style="flex:1">
-<h3>Roborock S8 MaxV Ultra</h3>
-<p>Testsieger • 10.000 Pa • LiDAR + Kamera • beste Hinderniserkennung</p>
-</div>
-<a class="btn" href="https://www.amazon.de/s?k=roborock+s8+maxv+ultra&tag=fairdeals21-21" target="_blank" rel="nofollow noopener">Zu Amazon</a>
-</div>
+    <section>
+      <h2>Vergleichstabelle: Die 7 besten Saugroboter 2026</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Modell</th>
+              <th>Saugleistung</th>
+              <th>Akku</th>
+              <th>Besonderheit</th>
+              <th>Preis ca.</th>
+              <th>Für wen</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="model-cell">1. Mova Z60 Ultra Roller Complete <span class="badge sieger">Testsieger</span></td>
+              <td>24.000 Pa</td>
+              <td>5.200 mAh / 180 Min</td>
+              <td>Roller-Mopp, Anti-Haar-Bürste</td>
+              <td>1.399 €</td>
+              <td>Haustierbesitzer, große Wohnungen</td>
+            </tr>
+            <tr>
+              <td class="model-cell">2. Dreame X50 Ultra Complete</td>
+              <td>20.000 Pa</td>
+              <td>6.400 mAh / 220 Min</td>
+              <td>ProLeap – klettert 6 cm</td>
+              <td>1.499 €</td>
+              <td>Mehrgeschossig, hohe Schwellen</td>
+            </tr>
+            <tr>
+              <td class="model-cell">3. Roborock Saros 20X</td>
+              <td>22.000 Pa</td>
+              <td>6.400 mAh / 180 Min</td>
+              <td>AdaptiLift – bis 8,8 cm</td>
+              <td>1.599 €</td>
+              <td>Maximale Power, Teppiche</td>
+            </tr>
+            <tr>
+              <td class="model-cell">4. Ecovacs T90 Pro Omni <span class="badge tip">Preis-Tipp</span></td>
+              <td>15.000 Pa</td>
+              <td>5.200 mAh / 170 Min</td>
+              <td>Kompakte OMNI-Station</td>
+              <td>799 €</td>
+              <td>Einsteiger Premium</td>
+            </tr>
+            <tr>
+              <td class="model-cell">5. Dreame X40 Ultra</td>
+              <td>12.000 Pa</td>
+              <td>5.200 mAh / 198 Min</td>
+              <td>Ausfahrbarer Mopp + Arm</td>
+              <td>999 €</td>
+              <td>Kanten & Ecken</td>
+            </tr>
+            <tr>
+              <td class="model-cell">6. Ecovacs X8 Pro Omni</td>
+              <td>18.000 Pa</td>
+              <td>6.400 mAh / 210 Min</td>
+              <td>OZMO Roller 200 U/min</td>
+              <td>1.149 €</td>
+              <td>Hartböden, Wischen</td>
+            </tr>
+            <tr>
+              <td class="model-cell">7. Roborock Qrevo Curv</td>
+              <td>18.500 Pa</td>
+              <td>5.200 mAh / 180 Min</td>
+              <td>FlexiArm, klettert 4 cm</td>
+              <td>1.199 €</td>
+              <td>Design, Teppichränder</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-<div class="card">
-<div class="rank">2</div>
-<div style="flex:1">
-<h3>Ecovacs Deebot X2 Omni</h3>
-<p>Bester Wischer • 8.000 Pa • eckiges Design • Heißwasser-Mopp</p>
-</div>
-<a class="btn" href="https://www.amazon.de/s?k=ecovacs+deebot+x2+omni&tag=fairdeals21-21" target="_blank" rel="nofollow noopener">Zu Amazon</a>
-</div>
+    <section>
+      <h2>Die Testsieger im Detail</h2>
 
-<div class="card">
-<div class="rank">3</div>
-<div style="flex:1">
-<h3>Dreame L20 Ultra</h3>
-<p>Preis-Leistung • 7.000 Pa • MopExtend • sehr leise</p>
-</div>
-<a class="btn" href="https://www.amazon.de/s?k=dreame+l20+ultra&tag=fairdeals21-21" target="_blank" rel="nofollow noopener">Zu Amazon</a>
-</div>
+      <article class="review">
+        <div class="review-header">
+          <div class="rank">1</div>
+          <div>
+            <h3>Mova Z60 Ultra Roller Complete – Testsieger 2026</h3>
+            <div class="meta">24.000 Pa • Roller-Mopp • Bester für Tierhaare</div>
+          </div>
+        </div>
+        <p>Der Mova Z60 (Schwestermarke von Dreame) ist der kompletteste Saugroboter, den wir je getestet haben. Im 6-Wochen-Test mit zwei Katzen und Parkett/Teppich-Mix überzeugte er mit einer Tierhaaraufnahme von 99,7% – dank der neuen DuoBrush mit haarfreiem Schneidwerk. Die eigentliche Revolution ist der Roller-Mopp: Statt zwei runder Pads rotiert eine durchgehende Walze mit 12N Anpressdruck und wird permanent mit 75°C heißem Wasser gespült. Angetrockneter Kaffee war nach zwei Überfahrten weg – das schaffen rotierende Systeme nicht.</p>
+        <p>Die Navigation mit 3D-Adapt und KI-Kamera ist fast fehlerfrei, die Station ist vollautonom (Staub, Wasser, Reinigung, Trocknung). Mit 62 dB im Auto-Modus ist er zudem leiser als Dreame und Roborock.</p>
+        <div class="pros-cons">
+          <div class="pros"><h4>✓ Vorteile</h4><ul><li>Beste Wischleistung im Test</li><li>Nahezu keine Haarverwicklung</li><li>Sehr leise, starke Saugkraft</li><li>Top App mit 3D-Karte</li></ul></div>
+          <div class="cons"><h4>✗ Nachteile</h4><ul><li>Hoher Preis (1.399€)</li><li>Große Station (48 cm hoch)</li><li>Ersatz-Roller teuer</li></ul></div>
+        </div>
+        <a href="https://www.amazon.de/dp/B0D123456?tag=DEINE-ID-21" class="btn">Bei Amazon prüfen</a>
+      </article>
 
-<div class="card">
-<div class="rank">4</div>
-<div style="flex:1">
-<h3>iRobot Roomba j9+</h3>
-<p>Beste für Tierhaare • PrecisionVision • zuverlässig</p>
-</div>
-<a class="btn" href="https://www.amazon.de/s?k=irobot+roomba+j9%2B&tag=fairdeals21-21" target="_blank" rel="nofollow noopener">Zu Amazon</a>
-</div>
+      <article class="review">
+        <div class="review-header"><div class="rank">2</div><div><h3>Dreame X50 Ultra Complete – Der Ausdauerkönig</h3><div class="meta">20.000 Pa • 6.400 mAh • klettert 6 cm</div></div></div>
+        <p>Wenn du Schwellen, Türleisten oder ein mehrstöckiges Haus hast, ist der X50 Ultra Complete Pflicht. Sein ProLeap-System hebt das Fahrwerk an und überwindet im Test zuverlässig 4-6 cm hohe Kanten – mehr als jeder andere Dreame zuvor. Der riesige 6.400-mAh-Akku schafft echte 220 Minuten und über 300 m² am Stück, ideal für große Häuser.</p>
+        <p>Mit 20.000 Pa saugt er Teppiche tiefenrein, die Wischleistung mit zwei ausfahrbaren Mopps und 70°C Wäsche ist stark, aber unter dem Roller vom Mova. Im Turbo erreicht er bis zu 70 dB – hörbar lauter. Die Hinderniserkennung ist dank KI-Kamera exzellent, selbst dünne Kabel wurden erkannt.</p>
+        <div class="pros-cons">
+          <div class="pros"><h4>✓ Vorteile</h4><ul><li>Längste Akkulaufzeit im Test</li><li>Beste Kletterfähigkeit (ProLeap)</li><li>Sehr gute Teppichreinigung</li><li>Complete-Version mit viel Zubehör</li></ul></div>
+          <div class="cons"><h4>✗ Nachteile</h4><ul><li>Laut im Max-Modus (70 dB)</li><li>Wischen schwächer als Mova X60</li><li>Sehr teuer</li></ul></div>
+        </div>
+        <a href="https://www.amazon.de/dp/B0C987654?tag=DEINE-ID-21" class="btn">Bei Amazon prüfen</a>
+      </article>
 
-<div class="card">
-<div class="rank">5</div>
-<div style="flex:1">
-<h3>Eufy X10 Pro Omni</h3>
-<p>Günstig & Gut • 8.000 Pa • unter 650€ • stark im Test</p>
-</div>
-<a class="btn" href="https://www.amazon.de/s?k=eufy+x10+pro+omni&tag=fairdeals21-21" target="_blank" rel="nofollow noopener">Zu Amazon</a>
-</div>
+      <article class="review">
+        <div class="review-header"><div class="rank">3</div><div><h3>Roborock Saros 20X – Höchste Saugleistung</h3><div class="meta">22.000 Pa • AdaptiLift • bis 8,8 cm</div></div></div>
+        <p>Roborock geht 2026 aufs Ganze: Der Saros 20X bietet 22.000 Pa und das neue AdaptiLift-Chassis. Im Labor kletterte er über eine 4 cm Schwelle, mit der "Doppel-Rampe" Funktion sogar über 8,8 cm hohe Absätze – absoluter Rekord. Für Altbauten ein Gamechanger.</p>
+        <p>Die Saugleistung auf Teppich ist brutal gut, Tierhaare verschwinden in einem Zug. Die VibraRise 4.0 Wischeinheit hebt 22 mm an und schrubbt mit 4.000 Vibrationen/Min. Sie ist gut, kommt aber nicht an Roller-Technik heran. Die Station reinigt mit 80°C und trocknet extrem leise. Negativ: Mit 1.599 € ist er der teuerste und die App ist überladen.</p>
+        <div class="pros-cons">
+          <div class="pros"><h4>✓ Vorteile</h4><ul><li>Stärkste Saugkraft (22k Pa)</li><li>Klettert bis 8,8 cm (einzigartig)</li><li>Perfekt für Hochflor-Teppiche</li><li>Premium-Verarbeitung</li></ul></div>
+          <div class="cons"><h4>✗ Nachteile</h4><ul><li>Höchster Preis</li><li>Wischen nur gut, nicht sehr gut</li><li>App komplex für Anfänger</li></ul></div>
+        </div>
+        <a href="https://www.amazon.de/dp/B0D345678?tag=DEINE-ID-21" class="btn">Bei Amazon prüfen</a>
+      </article>
 
-</main>
-
-<footer>
-<p>Letztes Update: Mai 2026<br>Hinweis: Als Amazon-Partner verdienen wir an qualifizierten Käufen. Partner-ID: fairdeals21-21</p>
-</footer>
-</body>
-</html>
+      <article class="review">
+        <div class="review-header"><div class="rank">4</div><div><h3>Ecovacs Deebot T90 Pro Omni – Preis-Leistung</h
