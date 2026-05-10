@@ -1,95 +1,337 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+<!-- Playables SDK -->
+<script>// Playables SDK v1.0.0
+// Game lifecycle bridge: rAF-based game-ready detection + event communication
+(function() {
+  'use strict';
+
+  // Idempotency: skip if already initialized (e.g., server-side injection
+  // followed by client-side inject-javascript via the Bloks webview component).
+  if (window.playablesSDK) return;
+
+  var HANDLER_NAME = 'playablesGameEventHandler';
+  var ANDROID_BRIDGE_NAME = '_MetaPlayablesBridge';
+  var RAF_FRAME_THRESHOLD = 3;
+
+  var gameReadySent = false;
+  var firstInteractionSent = false;
+  var errorSent = false;
+  var frameCount = 0;
+  var originalRAF = window.requestAnimationFrame;
+
+  // --- Transport Layer ---
+
+  function hasIOSBridge() {
+    return !!(window.webkit &&
+              window.webkit.messageHandlers &&
+              window.webkit.messageHandlers[HANDLER_NAME]);
+  }
+
+  function hasAndroidBridge() {
+    return !!(window[ANDROID_BRIDGE_NAME] &&
+              typeof window[ANDROID_BRIDGE_NAME].postEvent === 'function');
+  }
+
+  function isInIframe() {
+    return !!(window.parent && window.parent !== window);
+  }
+
+  function sendEvent(eventName, payload) {
+    var message = {
+      type: eventName,
+      payload: payload || {},
+      timestamp: Date.now()
+    };
+
+    if (hasIOSBridge()) {
+      try {
+        window.webkit.messageHandlers[HANDLER_NAME].postMessage(message);
+      } catch (e) { /* ignore */ }
+      return;
+    }
+
+    if (hasAndroidBridge()) {
+    try {
+      var p = payload || {};
+      p.__secureToken = window.__fbAndroidBridgeAuthToken || '';
+      p.timestamp = message.timestamp;
+      window[ANDROID_BRIDGE_NAME].postEvent(
+        eventName,
+        JSON.stringify(p)
+      );
+    } catch (e) { /* ignore */ }
+    return;
+  }
+
+    if (isInIframe()) {
+      try {
+        window.parent.postMessage(message, '*');
+      } catch (e) { /* ignore */ }
+      return;
+    }
+  }
+
+  // --- rAF Game-Ready Detection ---
+
+  function onFrame() {
+    if (gameReadySent) return;
+
+    frameCount++;
+    if (frameCount >= RAF_FRAME_THRESHOLD) {
+      gameReadySent = true;
+      sendEvent('game_ready', {
+        frame_count: frameCount,
+        detected_at: Date.now()
+      });
+      return;
+    }
+
+    originalRAF.call(window, onFrame);
+  }
+
+  if (originalRAF) {
+    window.requestAnimationFrame = function(callback) {
+      if (!gameReadySent) {
+        return originalRAF.call(window, function(timestamp) {
+          frameCount++;
+          if (frameCount >= RAF_FRAME_THRESHOLD && !gameReadySent) {
+            gameReadySent = true;
+            sendEvent('game_ready', {
+              frame_count: frameCount,
+              detected_at: Date.now()
+            });
+          }
+          callback(timestamp);
+        });
+      }
+      return originalRAF.call(window, callback);
+    };
+  }
+
+  // --- First User Interaction Detection ---
+
+  function setupFirstInteractionDetection() {
+    var events = ['touchstart', 'mousedown', 'keydown'];
+
+    function onFirstInteraction() {
+      if (firstInteractionSent) return;
+      firstInteractionSent = true;
+      sendEvent('user_interaction_start', null);
+
+      for (var i = 0; i < events.length; i++) {
+        document.removeEventListener(events[i], onFirstInteraction, true);
+      }
+    }
+
+    for (var i = 0; i < events.length; i++) {
+      document.addEventListener(events[i], onFirstInteraction, true);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupFirstInteractionDetection);
+  } else {
+    setupFirstInteractionDetection();
+  }
+
+  // --- Auto Error Capture ---
+
+  window.addEventListener('error', function(event) {
+    if (errorSent) return;
+    errorSent = true;
+    sendEvent('error', {
+      message: event.message || 'Unknown error',
+      source: event.filename || '',
+      lineno: event.lineno || 0,
+      colno: event.colno || 0,
+      auto_captured: true
+    });
+  });
+
+  window.addEventListener('unhandledrejection', function(event) {
+    if (errorSent) return;
+    errorSent = true;
+    var reason = event.reason;
+    sendEvent('error', {
+      message: (reason instanceof Error) ? reason.message : String(reason),
+      type: 'unhandled_promise_rejection',
+      auto_captured: true
+    });
+  });
+
+  // --- Public API ---
+
+  window.playablesSDK = {
+    complete: function(score) {
+      sendEvent('game_ended', {
+        score: score,
+        completed: true
+      });
+    },
+
+    error: function(message) {
+      if (errorSent) return;
+      errorSent = true;
+      sendEvent('error', {
+        message: message || 'Unknown error',
+        auto_captured: false
+      });
+    },
+
+    sendEvent: function(eventName, payload) {
+      if (!eventName || typeof eventName !== 'string') return;
+      sendEvent(eventName, payload);
+    }
+  };
+
+  // Kick off rAF detection in case no game code calls rAF immediately
+  if (originalRAF) {
+    originalRAF.call(window, onFrame);
+  }
+})();</script>
+<script>window.Intl=window.Intl||{};Intl.t=function(s){return(Intl._locale&&Intl._locale[s])||s;};</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Saugroboter Test 2026 - Die 3 Besten mit Wischfunktion</title>
-    <meta name="description" content="Saugroboter mit Wischfunktion im Test. Roborock S8, Dreame L20, Ecovacs X2 im Vergleich. Welcher lohnt sich 2026?">
+    <title>FairDeals21 – Die besten Tests 2026 | Unabhängige Tests. Ehrliche Empfehlungen.</title>
+    <meta name="description" content="FairDeals21: Unabhängige Produkttests für 2026. Wir testen Gaming Stühle, Luftreiniger, Powerstations und Saugroboter monatelang im Alltag. Nur ehrliche Gewinner.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0a0a0a; color: #fff; font-family: 'Arial', sans-serif; line-height: 1.6; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header { text-align: center; padding: 40px 20px; border: 3px solid #00ff88; border-radius: 15px; margin-bottom: 40px; background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%); box-shadow: 0 0 30px rgba(0, 255, 136, 0.3); }
-        .header h1 { color: #00ff88; font-size: 2.8em; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
-        .header p { color: #ccc; font-size: 1.2em; }
-        .badge { display: inline-block; background: #00ff88; color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin: 10px 5px; }
-        .produkt { background: #1a1a1a; border: 2px solid #333; border-radius: 15px; padding: 30px; margin: 30px 0; transition: all 0.3s ease; }
-        .produkt:hover { border-color: #00ff88; box-shadow: 0 0 20px rgba(0, 255, 136, 0.2); transform: translateY(-5px); }
-        .produkt h2 { color: #00ff88; font-size: 2em; margin-bottom: 15px; }
-        .preis { font-size: 1.8em; color: #00ff88; font-weight: bold; margin: 15px 0; }
-        .features { margin: 20px 0; }
-        .features li { margin: 10px 0; padding-left: 25px; position: relative; color: #ddd; }
-        .features li:before { content: "✓"; position: absolute; left: 0; color: #00ff88; font-weight: bold; }
-        .contra li:before { content: "✗"; color: #ff4444; }
-        .btn { display: block; background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%); color: #000; text-align: center; padding: 18px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 1.3em; margin-top: 20px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3); }
-        .btn:hover { transform: scale(1.05); box-shadow: 0 6px 25px rgba(0, 255, 136, 0.5); }
-        .sieger { border: 3px solid #00ff88 !important; position: relative; }
-        .sieger:before { content: "TESTSIEGER 2026"; position: absolute; top: -15px; left: 20px; background: #00ff88; color: #000; padding: 5px 20px; border-radius: 20px; font-weight: bold; font-size: 0.9em; }
-        .footer { text-align: center; margin-top: 60px; padding: 30px; color: #666; font-size: 0.9em; border-top: 1px solid #333; }
-        .footer a { color: #00ff88; text-decoration: none; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-4px); }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Saugroboter Test 2026</h1>
-            <p>Die 3 besten Saugroboter mit Wischfunktion im Vergleich</p>
-            <span class="badge">Aktualisiert: Mai 2026</span>
-            <span class="badge">Unabhängiger Test</span>
+<body class="bg-white text-slate-800">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-slate-100">
+        <div class="max-w-[1000px] mx-auto px-4 sm:px-6">
+            <div class="h-[72px] flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="text-white">
+                            <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 0 01-8.618 3.04A12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="text-[22px] font-extrabold tracking-tight leading-none text-slate-900">FairDeals<span class="text-blue-600">21</span></div>
+                        <div class="text-[12px] text-slate-500 font-medium -mt-0.5">Unabhängige Tests. Ehrliche Empfehlungen.</div>
+                    </div>
+                <div class="hidden sm:flex items-center gap-3">
+                    <div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        100% unabhängig
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="produkt sieger">
-            <h2>1. Roborock S8 Pro Ultra</h2>
-            <div class="preis">ca. 1.199€</div>
-            <ul class="features">
-                <li>Beste Wischleistung mit VibraRise 2.0</li>
-                <li>Selbstreinigende Absaugstation</li>
-                <li>6.000 Pa Saugkraft - Stärkste am Markt</li>
-                <li>Reactive 3D Hinderniserkennung</li>
-                <li>App-Steuerung + Alexa/Google</li>
-            </ul>
-            <ul class="features contra">
-                <li>Hoher Preis</li>
-                <li>Station braucht viel Platz</li>
-            </ul>
-            <a href="https://www.amazon.de/s?k=roborock+s8+pro+ultra&tag=fairdeals21-21" class="btn">» Preis bei Amazon prüfen</a>
+    </header>
+
+    <!-- Hero -->
+    <section class="relative">
+        <div class="max-w-[1000px] mx-auto px-4 sm:px-6 pt-12 md:pt-20 pb-10">
+            <div class="text-center">
+                <div class="inline-flex items-center gap-2 mb-5">
+                    <span class="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider rounded-full">Update 2026</span>
+                    <span class="text-sm text-slate-600">Zuletzt geprüft: 9. Mai 2026</span>
+                </div>
+                <h1 class="text-[38px] md:text-[52px] font-extrabold tracking-tight text-slate-900 leading-[1.05]">
+                    Die 4 besten Produkt-Tests 2026
+                </h1>
+                <p class="mt-5 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                    Wir kaufen selbst, testen 60–90 Tage im Alltag und empfehlen nur, was wirklich überzeugt. Keine bezahlten Rankings.
+                </p>
+                <div class="mt-6 flex items-center justify-center gap-6 text-sm text-slate-500">
+                    <div class="flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        <span>87 Produkte analysiert</span>
+                    </div>
+                    <div class="hidden sm:block w-1 h-1 bg-slate-300 rounded-full"></div>
+                    <div>23 selbst gekauft</div>
+                </div>
+            </div>
         </div>
-        <div class="produkt">
-            <h2>2. Dreame L20 Ultra Complete</h2>
-            <div class="preis">ca. 999€</div>
-            <ul class="features">
-                <li>MopExtend - Ausfahrbare Wischmopps für Ecken</li>
-                <li>7.000 Pa Saugkraft</li>
-                <li>Komplettstation mit Wasseranschluss</li>
-                <li>KI-Hinderniserkennung</li>
-                <li>Bestes Preis-Leistungs-Verhältnis</li>
-            </ul>
-            <ul class="features contra">
-                <li>Laut beim Absaugen</li>
-                <li>Ersatzteile teuer</li>
-            </ul>
-            <a href="https://www.amazon.de/s?k=dreame+l20+ultra&tag=fairdeals21-21" class="btn">» Preis bei Amazon prüfen</a>
-        </div>
-        <div class="produkt">
-            <h2>3. Ecovacs Deebot X2 Omni</h2>
-            <div class="preis">ca. 1.099€</div>
-            <ul class="features">
-                <li>Quadratisches Design - Reinigt Ecken perfekt</li>
-                <li>Heißwasser-Wischen 55°C</li>
-                <li>8.000 Pa Saugkraft</li>
-                <li>Sehr leise im Betrieb</li>
-                <li>Yiko Sprachsteuerung integriert</li>
-            </ul>
-            <ul class="features contra">
-                <li>App manchmal langsam</li>
-                <li>Weniger Zubehör als Konkurrenz</li>
-            </ul>
-            <a href="https://www.amazon.de/s?k=ecovacs+x2+omni&tag=fairdeals21-21" class="btn">» Preis bei Amazon prüfen</a>
-        </div>
-        <div class="footer">
-            <p><strong>Hinweis:</strong> Als Amazon-Partner verdiene ich an qualifizierten Verkäufen.</p>
-            <p>Alle Preise inkl. MwSt. Letzte Aktualisierung: 09.05.2026</p>
-            <p>© 2026 Dein Test-Portal | <a href="#">Impressum</a> | <a href="#">Datenschutz</a></p>
-        </div>
-    </div>
-</body>
-</html>
+    </section>
+
+    <!-- Grid -->
+    <main class="max-w-[1000px] mx-auto px-4 sm:px-6 pb-16 md:pb-24">
+        <div class="grid md:grid-cols-2 gap-5 md:gap-6">
+            
+            <!-- Card 1: Gaming Stuhl -->
+            <a href="/Jarvis-sites/gaming-stuhl-test-2026/" class="group card-hover block bg-white rounded-[20px] border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-slate-300">
+                <div class="relative h-[220px] bg-slate-100 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&w=1200&q=80" alt="Gaming Stuhl Test 2026" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                    <div class="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-lg shadow-sm">
+                        <div class="text-[11px] font-bold text-slate-900 uppercase tracking-wide">Testsieger</div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <h2 class="text-[22px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Gaming Stuhl Test 2026</h2>
+                    <p class="mt-1.5 text-[15px] text-slate-600">8+ Stunden bequem sitzen</p>
+                    <div class="mt-5 flex items-center justify-between">
+                        <div class="flex items-center gap-1">
+                            <div class="flex text-amber-400">
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                            </div>
+                            <span class="ml-1.5 text-xs text-slate-500">12 getestet</span>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 text-[14px] font-semibold text-white bg-slate-900 px-4 py-2 rounded-xl group-hover:bg-blue-600 transition-colors">
+                            Zum Test
+                            <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Card 2: Luftreiniger -->
+            <a href="/Jarvis-sites/luftreiniger-test-2026/" class="group card-hover block bg-white rounded-[20px] border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-slate-300">
+                <div class="relative h-[220px] bg-slate-100 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1585771724684-38269d6639fd?auto=format&fit=crop&w=1200&q=80" alt="Luftreiniger Test 2026" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                    <div class="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-lg shadow-sm">
+                        <div class="text-[11px] font-bold text-slate-900 uppercase tracking-wide">Stiftung Warentest</div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <h2 class="text-[22px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Luftreiniger Test 2026</h2>
+                    <p class="mt-1.5 text-[15px] text-slate-600">Stiftung Warentest Sieger</p>
+                    <div class="mt-5 flex items-center justify-between">
+                        <div class="flex items-center gap-1">
+                            <div class="flex text-amber-400">
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                            </div>
+                            <span class="ml-1.5 text-xs text-slate-500">18 getestet</span>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 text-[14px] font-semibold text-white bg-slate-900 px-4 py-2 rounded-xl group-hover:bg-blue-600 transition-colors">
+                            Zum Test
+                            <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Card 3: Powerstation -->
+            <a href="/Jarvis-sites/powerstation-test-2026/" class="group card-hover block bg-white rounded-[20px] border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-slate-300">
+                <div class="relative h-[220px] bg-slate-100 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1200&q=80" alt="Powerstation Test 2026" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                    <div class="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-lg shadow-sm">
+                        <div class="text-[11px] font-bold text-slate-900 uppercase tracking-wide">Blackout</div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <h2 class="text-[22px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Powerstation Test 2026</h2>
+                    <p class="mt-
